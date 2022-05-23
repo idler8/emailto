@@ -7,4 +7,4 @@ COPY src /code
 RUN yarn --production
 ENV PORT=80
 ENTRYPOINT node server.js
-HEALTHCHECK --interval=5m --timeout=10s CMD node healthcheck.js
+HEALTHCHECK --interval=1m --timeout=10s CMD node healthcheck.js

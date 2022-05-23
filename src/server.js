@@ -44,7 +44,9 @@ app.listen(PORT);
 
 (async function() {
   if (!AUTO) return;
+  console.log('自动配置预备');
   app.locals.LOCKED = Date.now() + 10000;
   app.locals.dkim = await require('./dns/ali.js')(generate());
   app.locals.LOCKED = Date.now() + 300000;
+  console.log('自动配置结束');
 })();
