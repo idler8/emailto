@@ -22,10 +22,10 @@ jobs:
       - name: Build image
         run: |
           docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-          IMAGE_ID=${{ github.repository_owner }}/$IMAGE_NAME
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          echo ${{ github.repository_owner }}/emailto >> $IMAGE_ID
+          echo $(echo $IMAGE_ID | tr '[A-Z]' '[a-z]') >> $IMAGE_ID
+          echo $(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') >> $VERSION
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && echo $(echo $VERSION | sed -e 's/^v//') >> $VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:latest
       - name: Push image to docker.io
