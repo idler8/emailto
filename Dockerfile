@@ -1,4 +1,5 @@
 FROM node:16.6.0-alpine
+RUN apk add postfix && postfix start
 WORKDIR /code
 COPY package.json /code/package.json
 COPY yarn.lock /code/yarn.lock
