@@ -11,6 +11,8 @@ on:
       - v*
 env:
   IMAGE_NAME: emailto
+  IMAGE_ID: ${{ github.repository_owner }}/emailto
+  VERSION: ${{ github.ref }}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,10 +24,8 @@ jobs:
       - name: Build image
         run: |
           docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-          echo ${{ github.repository_owner }}/emailto >> $IMAGE_ID
           echo $(echo $IMAGE_ID | tr '[A-Z]' '[a-z]') >> $IMAGE_ID
-          echo $(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') >> $VERSION
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && echo $(echo $VERSION | sed -e 's/^v//') >> $VERSION
+          echo $(echo $VERSION | sed -e 's/^v//') >> $VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:latest
       - name: Push image to docker.io
