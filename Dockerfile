@@ -7,4 +7,3 @@ COPY src /code
 RUN yarn --production
 ENV PORT=80
 ENTRYPOINT postfix start && node server.js
-HEALTHCHECK --interval=1m --timeout=10s CMD node healthcheck.js

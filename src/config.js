@@ -8,4 +8,3 @@ exports.FROM = (function(FROM) {
 })(process.env.FROM || 'noreply');
 exports.AUTO = process.env.AUTO;
 exports.DMARC = 'none';
-exports.SPF = '+all';
