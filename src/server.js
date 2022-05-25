@@ -1,45 +1,37 @@
-const { FROM, DELAY, PORT, AUTO } = require('./config.js');
-const mailto = require('./libs/mailto.js');
+const { FROM, DELAY, PORT, AUTO, RUN } = require('./config.js');
 const { generate } = require('./libs/dkim.js');
+const mailto = require('./libs/mailto.js');
+const doTry = require('./utils/asyncTry.js')((e, res) => e ? res.json({ '_error': { 'message': e }}) : res.end('OK'));
 
 const express = require('express');
 const app = express();
 app.use(express.json({ strict: false }));
 app.use(express.urlencoded({ extended: true }));
-app.get('/health', async function(req, res) {
-  res.json('OK');
-});
+app.get('/health', (req, res) => res.json('OK'));
 app.post('/dkim/ali', async function(req, res) {
-  if (app.locals.LOCKED) {
-    const sec = ~~((app.locals.LOCKED - Date.now()) / 1000);
-    if (sec > 0) return res.json({ '_error': { 'message': '请稍后再试（' + sec + 's）' }});
-  }
-  app.locals.LOCKED = Date.now() + 10000;
-  app.locals.dkim = await require('./dns/ali.js')(generate(), req.body.accessKeyId, req.body.accessKeySecret);
-  app.locals.LOCKED = Date.now() + 300000;
-  res.end('OK');
+  const { accessKeyId, accessKeySecret } = req.body;
+  doTry(async function() {
+    await mailto.options({ from: FROM, dkim: await require('./dns/ali.js')(generate(), accessKeyId, accessKeySecret) });
+  }, res);
 });
-const regEmail = /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+(\.[a-zA-Z0-9_-])+/;
 app.post('/mailto', function(req, res) {
-  if (!app.locals.dkim) return res.json({ '_error': { 'message': '系统准备中' }});
-  const { to, subject, text, html, attachments } = req.body;
-  if (!regEmail.test(to)) return res.json({ '_error': { 'message': '错误的目标地址' }});
-  if (!subject) return res.json({ '_error': { 'message': '缺少标题' }});
-  if (!text && !html) return res.json({ '_error': { 'message': '缺少正文' }});
-  if (attachments?.length > 0 && attachments.some(({ filename, path }) => !filename || !path || path.indexOf('http') !== 0)) {
-    return res.json({ '_error': { 'message': '附件结构不正确' }});
-  }
-  mailto({ from: FROM, to, subject, text, html, attachments, dkim: app.locals.dkim }, DELAY);
-  return res.end('OK');
+  doTry(async function() {
+    await mailto.send(mailto.verify(req.body), DELAY);
+  }, res);
 });
-
 app.listen(PORT);
 
 (async function() {
-  if (!AUTO) return;
-  console.log('自动配置预备');
-  app.locals.LOCKED = Date.now() + 10000;
-  app.locals.dkim = await require('./dns/ali.js')(generate());
-  app.locals.LOCKED = Date.now() + 300000;
-  console.log('自动配置结束');
+  if (AUTO) mailto.options({ from: FROM, dkim: await require('./dns/ali.js')(generate()) });
+  if (RUN) {
+    const delayFunction = require('./utils/asyncDelay.js')(1000);
+    require('./utils/asyncRecursion.js')(function() {
+      console.log('准备获取数据');
+      return delayFunction(() => {
+        const axios = require('axios');
+        console.log('开始获取数据');
+        return axios({ method: 'GET', url: RUN }).then(res => mailto.send(mailto.verify(res.data), DELAY));
+      }, DELAY);
+    })();
+  }
 })();
